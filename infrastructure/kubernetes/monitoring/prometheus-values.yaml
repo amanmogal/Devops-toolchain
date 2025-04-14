@@ -1,5 +1,25 @@
+global:
+  imageRegistry: gcr.io
+  imagePullSecrets: []
+
 prometheusOperator:
-  createCustomResource: false  
+  admissionWebhooks:
+    patch:
+      image:
+        registry: gcr.ios
+        repository: google-containers/kube-webhook-certgen
+        tag: v1.5.2
+        pullPolicy: IfNotPresent
+  image:
+    registry: gcr.io
+    repository: google-containers/prometheus-operator
+    tag: v0.50.0
+  prometheusConfigReloader:
+    image:
+      registry: gcr.io
+      repository: google-containers/prometheus-config-reloader
+      tag: v0.50.0
+  createCustomResource: true
 
 prometheus:
   prometheusSpec:
@@ -11,6 +31,10 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
+    image:
+      registry: gcr.io
+      repository: google-containers/prometheus
+      tag: v2.34.0
     resources:
       requests:
         memory: "512Mi"
@@ -25,6 +49,10 @@ grafana:
   persistence:
     enabled: true
     size: 10Gi
+  image:
+    registry: gcr.io
+    repository: google-containers/grafana
+    tag: 8.3.3
   resources:
     requests:
       memory: "256Mi"
@@ -38,6 +66,10 @@ alertmanager:
   config:
     global:
       resolve_timeout: 5m
+  image:
+    registry: gcr.io
+    repository: google-containers/alertmanager
+    tag: v0.23.0
   resources:
     requests:
       memory: "128Mi"
@@ -48,6 +80,10 @@ alertmanager:
 
 nodeExporter:
   enabled: true
+  image:
+    registry: gcr.io
+    repository: google-containers/node-exporter
+    tag: v1.3.1
   resources:
     requests:
       memory: "64Mi"
@@ -58,6 +94,10 @@ nodeExporter:
 
 kubeStateMetrics:
   enabled: true
+  image:
+    registry: gcr.io
+    repository: google-containers/kube-state-metrics
+    tag: v2.3.0
 
 serverFiles:
   prometheus.yml:
