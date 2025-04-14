@@ -1,4 +1,3 @@
-# Use a base image
 FROM node:18-alpine
 
 # Set working directory

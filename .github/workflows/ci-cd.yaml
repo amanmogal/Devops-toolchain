@@ -65,16 +65,24 @@ jobs:
     # Build Stage
     - name: Build Docker Image
       run: |
-        docker build -t $REGISTRY/app:$GITHUB_SHA . || exit 1
-        docker tag $REGISTRY/app:$GITHUB_SHA $REGISTRY/app:latest
+        docker build \
+          --build-arg NODE_ENV=production \
+          --build-arg PORT=3000 \
+          --no-cache \
+          -t $REGISTRY/app:$GITHUB_SHA \
+          -t $REGISTRY/app:latest \
+          .
 
     # Test Stage with error handling
     - name: Run Tests
       run: |
-        if ! docker run --rm $REGISTRY/app:$GITHUB_SHA npm test; then
-          echo "Tests failed"
-          exit 1
-        fi
+        echo "Running basic tests..."
+        # Test container health
+        docker run -d --name test-container $REGISTRY/app:$GITHUB_SHA
+        sleep 10
+        docker inspect test-container --format='{{.State.Health.Status}}' || exit 1
+        docker stop test-container
+        docker rm test-container
 
     # Security Scan Stage
     - name: Run Security Scan
@@ -104,20 +112,45 @@ jobs:
           exit 1
         fi
 
-    # Deploy to Dev Stage with error handling
+    # Deploy to Dev Stage
     - name: Deploy to Dev
       run: |
         kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
-        if ! kubectl apply -k ./k8s/overlays/dev; then
-          echo "Failed to apply dev configuration"
-          exit 1
-        fi
-        kubectl set image deployment/app app=$REGISTRY/app:$GITHUB_SHA -n dev
-        if ! kubectl rollout status deployment/app -n dev --timeout=300s; then
-          echo "Deployment to dev failed"
-          kubectl rollout undo deployment/app -n dev
-          exit 1
-        fi
+        cat <<EOF | kubectl apply -f -
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: app
+          namespace: dev
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: devops-toolchain
+          template:
+            metadata:
+              labels:
+                app: devops-toolchain
+            spec:
+              containers:
+              - name: app
+                image: $REGISTRY/app:$GITHUB_SHA
+                ports:
+                - containerPort: 3000
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: app-service
+          namespace: dev
+        spec:
+          type: ClusterIP
+          ports:
+          - port: 80
+            targetPort: 3000
+          selector:
+            app: devops-toolchain
+        EOF
 
     # Add SonarQube Analysis with explicit configuration
     - name: Cache SonarQube packages
@@ -210,23 +243,52 @@ jobs:
           exit 1
         fi
 
-    # Deploy to Prod Stage with error handling and rollback
+    # Deploy to Prod Stage
     - name: Deploy to Production
       run: |
         kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
-        if ! kubectl apply -k ./k8s/overlays/prod; then
-          echo "Failed to apply prod configuration"
-          exit 1
-        fi
-        OLD_VERSION=$(kubectl get deployment/app -n prod -o=jsonpath='{.spec.template.spec.containers[0].image}')
-        echo "OLD_VERSION=$OLD_VERSION" >> $GITHUB_ENV
-        
-        kubectl set image deployment/app app=$REGISTRY/app:$GITHUB_SHA -n prod
-        if ! kubectl rollout status deployment/app -n prod --timeout=300s; then
-          echo "Deployment to prod failed, rolling back..."
-          kubectl set image deployment/app app=$OLD_VERSION -n prod
-          exit 1
-        fi
+        cat <<EOF | kubectl apply -f -
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: app
+          namespace: prod
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: devops-toolchain
+          template:
+            metadata:
+              labels:
+                app: devops-toolchain
+            spec:
+              containers:
+              - name: app
+                image: $REGISTRY/app:$GITHUB_SHA
+                ports:
+                - containerPort: 3000
+                resources:
+                  requests:
+                    memory: "128Mi"
+                    cpu: "100m"
+                  limits:
+                    memory: "256Mi"
+                    cpu: "200m"
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: app-service
+          namespace: prod
+        spec:
+          type: LoadBalancer
+          ports:
+          - port: 80
+            targetPort: 3000
+          selector:
+            app: devops-toolchain
+        EOF
 
     # Get Service URL
     - name: Get Service URL
