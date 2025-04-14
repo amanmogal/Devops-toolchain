@@ -203,15 +203,15 @@ jobs:
         echo "pipeline_duration_seconds{status=\"${{ job.status }}\"} $SECONDS" >> /tmp/metrics
         curl -X POST http://prometheus-pushgateway:9091/metrics/job/github_actions --data-binary "@/tmp/metrics"
 
-    # Add Test Reporting
-    - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always()
-      with:
-        files: "test-results/*.xml"  # Updated path
-        check_name: "Test Results"
-        comment_mode: off
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+    # Commented out Test Reporting
+    # - name: Publish Test Results
+    #   uses: EnricoMi/publish-unit-test-result-action@v2
+    #   if: always()
+    #   with:
+    #     files: "test-results/*.xml"  # Updated path
+    #     check_name: "Test Results"
+    #     comment_mode: off
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
 
     # Add this job-level monitoring
     - name: Setup Pipeline Monitoring
