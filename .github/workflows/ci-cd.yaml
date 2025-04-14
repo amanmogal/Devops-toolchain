@@ -35,6 +35,8 @@ jobs:
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
         token_format: 'access_token'
+        project_id: 'devops-toolchain-456502'  # Add your project ID
+        service_account: 'github-actions@devops-toolchain-456502.iam.gserviceaccount.com'
 
     # Setup gcloud CLI
     - name: Set up Cloud SDK
