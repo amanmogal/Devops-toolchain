@@ -49,8 +49,8 @@ jobs:
         gcloud components install kubectl
         gcloud components install gke-gcloud-auth-plugin
 
-    # Configure docker for Artifact Registry
-    - name: Configure docker
+    # Configure Docker for Artifact Registry
+    - name: Configure Docker
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
@@ -62,27 +62,34 @@ jobs:
           exit 1
         fi
 
-    # Build Stage
-    - name: Build docker Image
+    # Build Stage with fixed tag format
+    - name: Build Docker Image
+      env:
+        REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
+        IMAGE_TAG: ${{ github.sha }}
       run: |
+        # Validate environment variables
+        echo "Building image for registry: $REGISTRY"
+        echo "Using tag: $IMAGE_TAG"
+        
+        # Build with proper tag format
         docker build \
           --build-arg NODE_ENV=production \
-          --build-arg PORT=3000 \
-          --no-cache \
-          -t $REGISTRY/app:$GITHUB_SHA \
-          -t $REGISTRY/app:latest \
+          -t "${REGISTRY}/app:${IMAGE_TAG}" \
+          -t "${REGISTRY}/app:latest" \
           .
+        
+        # Verify the build
+        docker images "${REGISTRY}/app"
 
-    # Test Stage with error handling
+    # Test Stage
     - name: Run Tests
+      env:
+        REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
+        IMAGE_TAG: ${{ github.sha }}
       run: |
         echo "Running basic tests..."
-        # Test container health
-        docker run -d --name test-container $REGISTRY/app:$GITHUB_SHA
-        sleep 10
-        docker inspect test-container --format='{{.State.Health.Status}}' || exit 1
-        docker stop test-container
-        docker rm test-container
+        docker run --rm "${REGISTRY}/app:${IMAGE_TAG}" npm test || exit 1
 
     # Security Scan Stage
     - name: Run Security Scan
@@ -205,6 +212,31 @@ jobs:
         check_name: "Test Results"
         comment_mode: off
         github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    # Add this job-level monitoring
+    - name: Setup Pipeline Monitoring
+      run: |
+        cat <<EOF > /tmp/pipeline_metrics
+        # HELP pipeline_duration_seconds Duration of pipeline execution
+        # TYPE pipeline_duration_seconds gauge
+        # HELP pipeline_status Pipeline execution status (0=failed, 1=success)
+        # TYPE pipeline_status gauge
+        EOF
+
+    # Add after each major stage (build, test, deploy)
+    - name: Export Stage Metrics
+      if: always()
+      run: |
+        STAGE_DURATION=$SECONDS
+        echo "pipeline_stage_duration_seconds{stage=\"${{ github.job }}\",pipeline=\"${{ github.workflow }}\"} $STAGE_DURATION" >> /tmp/pipeline_metrics
+        echo "pipeline_status{stage=\"${{ github.job }}\",status=\"${{ job.status }}\"} $([ "${{ job.status }}" = "success" ] && echo 1 || echo 0)" >> /tmp/pipeline_metrics
+
+    # Add at the end of the workflow
+    - name: Push Pipeline Metrics
+      if: always()
+      run: |
+        curl -X POST http://prometheus-pushgateway.monitoring:9091/metrics/job/github_actions \
+          --data-binary "@/tmp/pipeline_metrics"
 
   deploy-prod:
     name: Deploy to Production

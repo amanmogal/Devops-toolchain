@@ -1,11 +1,18 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: app-monitor
+  name: devops-toolchain-monitor
   namespace: monitoring
 spec:
   selector:
     matchLabels:
-      app: your-app
+      app: devops-toolchain
+  namespaceSelector:
+    matchNames:
+      - dev
+      - prod
   endpoints:
     - port: metrics
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
