@@ -30,8 +30,7 @@ data:
             },
             "targets": [
               {
-                "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (node)",
-                "legendFormat": "{{node}}"
+                "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (node)"
               }
             ]
           },
