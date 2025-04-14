@@ -4,19 +4,82 @@ metadata:
   name: grafana-dashboards
   namespace: monitoring
 data:
-  cluster-overview.json: |
+  cluster-dashboard.json: |
     {
-      "title": "Cluster Overview",
-      "panels": [
-        {
-          "title": "CPU Usage",
-          "type": "graph",
-          "datasource": "Prometheus",
-          "targets": [
-            {
-              "expr": "sum(rate(container_cpu_usage_seconds_total[5m])) by (pod)"
-            }
-          ]
-        }
-      ]
+      "dashboard": {
+        "title": "Kubernetes Cluster Overview",
+        "panels": [
+          {
+            "title": "CPU Usage by Node",
+            "type": "graph",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (node)"
+              }
+            ]
+          },
+          {
+            "title": "Memory Usage by Node",
+            "type": "graph",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "sum(container_memory_usage_bytes{container!=\"\"}) by (node)"
+              }
+            ]
+          },
+          {
+            "title": "Pod Status",
+            "type": "stat",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "sum(kube_pod_status_phase) by (phase)"
+              }
+            ]
+          },
+          {
+            "title": "Network I/O",
+            "type": "graph",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "sum(rate(container_network_receive_bytes_total[5m])) by (node)"
+              },
+              {
+                "expr": "sum(rate(container_network_transmit_bytes_total[5m])) by (node)"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  node-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Node Metrics",
+        "panels": [
+          {
+            "title": "Node CPU Usage",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"
+              }
+            ]
+          },
+          {
+            "title": "Node Memory Usage",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "targets": [
+              {
+                "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100"
+              }
+            ]
+          }
+        ]
+      }
     }

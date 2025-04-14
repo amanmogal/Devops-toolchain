@@ -24,3 +24,14 @@ spec:
         - namespaceSelector:
             matchLabels:
               name: monitoring
+
+# 2. Pod Security Policies
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-pod
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 2000
