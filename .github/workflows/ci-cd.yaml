@@ -49,21 +49,21 @@ jobs:
         gcloud components install kubectl
         gcloud components install gke-gcloud-auth-plugin
 
-    # Configure Docker for Artifact Registry
-    - name: Configure Docker
+    # Configure docker for Artifact Registry
+    - name: Configure docker
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-    # Check for Dockerfile
-    - name: Check Dockerfile exists
+    # Check for dockerfile
+    - name: Check dockerfile exists
       run: |
-        if [ ! -f dpaockerfile ]; then
-          echo "Error: Dockerfile not found"
+        if [ ! -f dockerfile ]; then
+          echo "Error: dockerfile not found"
           exit 1
         fi
 
     # Build Stage
-    - name: Build Docker Image
+    - name: Build docker Image
       run: |
         docker build \
           --build-arg NODE_ENV=production \
@@ -96,7 +96,7 @@ jobs:
       continue-on-error: true
 
     # Push Image Stage with error handling
-    - name: Push Docker Image
+    - name: Push docker Image
       run: |
         if ! docker push $REGISTRY/app:$GITHUB_SHA; then
           echo "Failed to push image"

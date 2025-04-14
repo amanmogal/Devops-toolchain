@@ -209,7 +209,7 @@ resource "google_storage_bucket" "artifacts" {
 resource "google_artifact_registry_repository" "repo" {
   location      = var.region
   repository_id = "devops-toolchain"
-  format        = "DOCKER"
+  format        = "docker"
 }
 
 # Tools node pool
