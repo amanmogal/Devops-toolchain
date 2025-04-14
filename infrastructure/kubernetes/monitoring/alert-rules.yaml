@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: critical-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: node.rules
+      rules:
+        - alert: NodeHighCPU
+          expr: node:node_cpu_utilization:avg1m > 80
+          for: 5m
+        - alert: NodeHighMemory
+          expr: node:node_memory_utilization > 80
+          for: 5m
