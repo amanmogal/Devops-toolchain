@@ -1,0 +1,175 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PROJECT_ID: devops-toolchain-456502
+  GKE_CLUSTER: devops-toolchain-cluster
+  GKE_ZONE: us-central1
+  REGISTRY: us-central1-docker.pkg.dev/$PROJECT_ID/devops-toolchain
+
+jobs:
+  build-test-deploy:
+    name: Build, Test, and Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Authenticate to Google Cloud
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+        token_format: 'access_token'
+
+    # Setup gcloud CLI
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    # Install kubectl
+    - name: Install kubectl
+      run: |
+        gcloud components install kubectl
+        gcloud components install gke-gcloud-auth-plugin
+
+    # Configure Docker for Artifact Registry
+    - name: Configure Docker
+      run: |
+        gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+    # Check for Dockerfile
+    - name: Check Dockerfile exists
+      run: |
+        if [ ! -f Dockerfile ]; then
+          echo "Error: Dockerfile not found"
+          exit 1
+        fi
+
+    # Build Stage
+    - name: Build Docker Image
+      run: |
+        docker build -t $REGISTRY/app:$GITHUB_SHA . || exit 1
+        docker tag $REGISTRY/app:$GITHUB_SHA $REGISTRY/app:latest
+
+    # Test Stage with error handling
+    - name: Run Tests
+      run: |
+        if ! docker run --rm $REGISTRY/app:$GITHUB_SHA npm test; then
+          echo "Tests failed"
+          exit 1
+        fi
+
+    # Security Scan Stage
+    - name: Run Security Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ env.REGISTRY }}/app:${{ github.sha }}'
+        format: 'table'
+        exit-code: '1'
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+      continue-on-error: true
+
+    # Push Image Stage with error handling
+    - name: Push Docker Image
+      run: |
+        if ! docker push $REGISTRY/app:$GITHUB_SHA; then
+          echo "Failed to push image"
+          exit 1
+        fi
+        docker push $REGISTRY/app:latest
+
+    # Get GKE Credentials with error handling
+    - name: Get GKE Credentials
+      run: |
+        if ! gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE --project $PROJECT_ID; then
+          echo "Failed to get cluster credentials"
+          exit 1
+        fi
+
+    # Deploy to Dev Stage with error handling
+    - name: Deploy to Dev
+      run: |
+        kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+        if ! kubectl apply -k ./k8s/overlays/dev; then
+          echo "Failed to apply dev configuration"
+          exit 1
+        fi
+        kubectl set image deployment/app app=$REGISTRY/app:$GITHUB_SHA -n dev
+        if ! kubectl rollout status deployment/app -n dev --timeout=300s; then
+          echo "Deployment to dev failed"
+          kubectl rollout undo deployment/app -n dev
+          exit 1
+        fi
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: build-test-deploy
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      url: ${{ steps.get_url.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Authenticate to Google Cloud
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+        token_format: 'access_token'
+
+    # Install kubectl
+    - name: Install kubectl
+      run: |
+        gcloud components install kubectl
+        gcloud components install gke-gcloud-auth-plugin
+
+    # Get GKE Credentials with error handling
+    - name: Get GKE Credentials
+      run: |
+        if ! gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE --project $PROJECT_ID; then
+          echo "Failed to get cluster credentials"
+          exit 1
+        fi
+
+    # Deploy to Prod Stage with error handling and rollback
+    - name: Deploy to Production
+      run: |
+        kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
+        if ! kubectl apply -k ./k8s/overlays/prod; then
+          echo "Failed to apply prod configuration"
+          exit 1
+        fi
+        OLD_VERSION=$(kubectl get deployment/app -n prod -o=jsonpath='{.spec.template.spec.containers[0].image}')
+        echo "OLD_VERSION=$OLD_VERSION" >> $GITHUB_ENV
+        
+        kubectl set image deployment/app app=$REGISTRY/app:$GITHUB_SHA -n prod
+        if ! kubectl rollout status deployment/app -n prod --timeout=300s; then
+          echo "Deployment to prod failed, rolling back..."
+          kubectl set image deployment/app app=$OLD_VERSION -n prod
+          exit 1
+        fi
+
+    # Get Service URL
+    - name: Get Service URL
+      id: get_url
+      run: |
+        PROD_URL=$(kubectl get service app-service -n prod -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        echo "url=https://${PROD_URL}" >> $GITHUB_OUTPUT

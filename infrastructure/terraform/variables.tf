@@ -1,6 +1,7 @@
 variable "project_id" {
   description = "The project ID to host the cluster in"
   type        = string
+  default     = "devops-toolchain-456502"
 }
 
 variable "region" {
@@ -10,9 +11,9 @@ variable "region" {
 }
 
 variable "gke_num_nodes" {
-  description = "Number of nodes in the GKE node pool"
+  description = "Number of nodes per zone in the GKE node pool"
   type        = number
-  default     = 3
+  default     = 2
 }
 
 variable "machine_type" {
