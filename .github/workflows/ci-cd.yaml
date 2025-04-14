@@ -35,7 +35,7 @@ jobs:
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
         token_format: 'access_token'
-        project_id: 'devops-toolchain-456502'  # Add your project ID
+        project_id: 'devops-toolchain-456502'  
         service_account: 'github-actions@devops-toolchain-456502.iam.gserviceaccount.com'
 
     # Setup gcloud CLI
@@ -168,15 +168,6 @@ jobs:
       if: always()
       with:
         files: "**/test-results/*.xml"
-
-    # Add Notifications
-    - name: Notify Slack
-      uses: 8398a7/action-slack@v3
-      if: always()
-      with:
-        status: ${{ job.status }}
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   deploy-prod:
     name: Deploy to Production
