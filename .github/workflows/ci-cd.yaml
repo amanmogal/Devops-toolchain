@@ -126,13 +126,14 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       with:
-        projectBaseDir: .
         args: >
           -Dsonar.projectKey=devops-toolchain
           -Dsonar.projectName="DevOps Toolchain"
           -Dsonar.sources=.
           -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
           -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.java.binaries=.
+          -Dsonar.exclusions=**/*.pyc,**/*.class,**/node_modules/**,**/dist/**,.git/**,.github/**
 
     # Optional: Add Quality Gate check
     - name: SonarQube Quality Gate check

@@ -74,9 +74,8 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-    - port: 9000
-      targetPort: 9000
-      protocol: TCP
+  - port: 9000
+    targetPort: 9000
   selector:
     app: sonarqube
 ---
