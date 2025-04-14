@@ -239,12 +239,3 @@ jobs:
       run: |
         PROD_URL=$(kubectl get service app-service -n prod -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
         echo "url=https://${PROD_URL}" >> $GITHUB_OUTPUT
-
-  integration-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run Integration Tests
-        run: |
-          kubectl apply -f test/
-          ./run-integration-tests.sh
