@@ -7,15 +7,31 @@ data:
   cluster-dashboard.json: |
     {
       "dashboard": {
+        "id": null,
+        "uid": "cluster-overview",
         "title": "Kubernetes Cluster Overview",
+        "schemaVersion": 30,
+        "version": 1,
+        "refresh": "1m",
+        "time": {
+          "from": "now-6h",
+          "to": "now"
+        },
         "panels": [
           {
             "title": "CPU Usage by Node",
             "type": "graph",
             "datasource": "Prometheus",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            },
             "targets": [
               {
-                "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (node)"
+                "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (node)",
+                "legendFormat": "{{node}}"
               }
             ]
           },
@@ -23,9 +39,16 @@ data:
             "title": "Memory Usage by Node",
             "type": "graph",
             "datasource": "Prometheus",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            },
             "targets": [
               {
-                "expr": "sum(container_memory_usage_bytes{container!=\"\"}) by (node)"
+                "expr": "sum(container_memory_usage_bytes{container!=\"\"}) by (node)",
+                "legendFormat": "{{node}}"
               }
             ]
           },
@@ -33,9 +56,16 @@ data:
             "title": "Pod Status",
             "type": "stat",
             "datasource": "Prometheus",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 8
+            },
             "targets": [
               {
-                "expr": "sum(kube_pod_status_phase) by (phase)"
+                "expr": "sum(kube_pod_status_phase) by (phase)",
+                "legendFormat": "{{phase}}"
               }
             ]
           },
@@ -43,12 +73,20 @@ data:
             "title": "Network I/O",
             "type": "graph",
             "datasource": "Prometheus",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 8
+            },
             "targets": [
               {
-                "expr": "sum(rate(container_network_receive_bytes_total[5m])) by (node)"
+                "expr": "sum(rate(container_network_receive_bytes_total[5m])) by (node)",
+                "legendFormat": "{{node}} Receive"
               },
               {
-                "expr": "sum(rate(container_network_transmit_bytes_total[5m])) by (node)"
+                "expr": "sum(rate(container_network_transmit_bytes_total[5m])) by (node)",
+                "legendFormat": "{{node}} Transmit"
               }
             ]
           }
@@ -58,15 +96,40 @@ data:
   node-dashboard.json: |
     {
       "dashboard": {
+        "id": null,
+        "uid": "node-metrics",
         "title": "Node Metrics",
+        "schemaVersion": 30,
+        "version": 1,
+        "refresh": "1m",
+        "time": {
+          "from": "now-6h",
+          "to": "now"
+        },
         "panels": [
           {
             "title": "Node CPU Usage",
             "type": "gauge",
             "datasource": "Prometheus",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 0
+            },
+            "options": {
+              "min": 0,
+              "max": 100,
+              "thresholds": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "red", "value": 85 }
+              ]
+            },
             "targets": [
               {
-                "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"
+                "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                "legendFormat": "{{instance}}"
               }
             ]
           },
@@ -74,9 +137,25 @@ data:
             "title": "Node Memory Usage",
             "type": "gauge",
             "datasource": "Prometheus",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 0
+            },
+            "options": {
+              "min": 0,
+              "max": 100,
+              "thresholds": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "red", "value": 85 }
+              ]
+            },
             "targets": [
               {
-                "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100"
+                "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+                "legendFormat": "{{instance}}"
               }
             ]
           }
