@@ -57,7 +57,7 @@ jobs:
     # Check for Dockerfile
     - name: Check Dockerfile exists
       run: |
-        if [ ! -f Dockerfile ]; then
+        if [ ! -f dpaockerfile ]; then
           echo "Error: Dockerfile not found"
           exit 1
         fi
