@@ -1,4 +1,10 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: code-quality
+
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: sonarqube-data
@@ -9,6 +15,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -27,22 +34,29 @@ spec:
     spec:
       containers:
       - name: sonarqube
-        image: sonarqube:latest
+        image: sonarqube:9.9-community
         ports:
         - containerPort: 9000
         env:
-        - name: SONARQUBE_JDBC_URL
+        - name: SONAR_JDBC_URL
           value: jdbc:postgresql://devops-toolchain-db:5432/sonar
-        - name: SONARQUBE_JDBC_USERNAME
+        - name: SONAR_JDBC_USERNAME
           valueFrom:
             secretKeyRef:
               name: sonarqube-db-credentials
               key: username
-        - name: SONARQUBE_JDBC_PASSWORD
+        - name: SONAR_JDBC_PASSWORD
           valueFrom:
             secretKeyRef:
               name: sonarqube-db-credentials
               key: password
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1000m"
         volumeMounts:
         - name: data
           mountPath: /opt/sonarqube/data
@@ -50,6 +64,7 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: sonarqube-data
+
 ---
 apiVersion: v1
 kind: Service
