@@ -6,7 +6,8 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - port: 9091
-    targetPort: 9091
+    - port: 9091
+      targetPort: 9091
+      protocol: TCP
   selector:
     app: prometheus-pushgateway

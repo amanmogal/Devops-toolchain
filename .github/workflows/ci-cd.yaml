@@ -52,7 +52,10 @@ jobs:
     - name: Configure Docker
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
+ 
+        # Add a debugging step to list files
+    - name: List files
+      run: ls -la
     # Check for Dockerfile
     - name: Check Dockerfile exists
       run: |
@@ -185,16 +188,14 @@ jobs:
         echo "pipeline_stage_duration_seconds{stage=\"${{ github.job }}\",pipeline=\"${{ github.workflow }}\"} $STAGE_DURATION" >> /tmp/pipeline_metrics
         echo "pipeline_status{stage=\"${{ github.job }}\",status=\"${{ job.status }}\"} $([ "${{ job.status }}" = "success" ] && echo 1 || echo 0)" >> /tmp/pipeline_metrics
 
+    
+
     # Add at the end of the workflow
     - name: Push Pipeline Metrics
       if: always()
       run: |
-        curl -X POST http://prometheus-pushgateway.monitoring:9091/metrics/job/github_actions \
+        curl -X POST http://34.60.241.53:9091/metrics/job/github_actions \
           --data-binary "@/tmp/pipeline_metrics"
-
-    # Add a debugging step to list files
-    - name: List files
-      run: ls -la
 
   deploy-prod:
     name: Deploy to Production
