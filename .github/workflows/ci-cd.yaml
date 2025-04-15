@@ -65,7 +65,7 @@ jobs:
     # Build Stage with fixed tag format
     - name: Build Docker Image
       env:
-        REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
+        DOCKERREGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # Validate environment variables
