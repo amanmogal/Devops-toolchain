@@ -64,7 +64,7 @@ jobs:
     # Build Stage with fixed tag format
     - name: Build Docker Image
       env:
-        REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
+        REGISTRY: us-central1-docker.pkg.dev/devops-toolchain-456502/devops-toolchain
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # Validate environment variables
@@ -84,7 +84,7 @@ jobs:
     # Test Stage
     - name: Run Tests
       env:
-        REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
+        REGISTRY: us-central1-docker.pkg.dev/devops-toolchain-456502/devops-toolchain
         IMAGE_TAG: ${{ github.sha }}
       run: |
         echo "Running basic tests..."
