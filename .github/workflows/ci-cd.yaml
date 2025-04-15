@@ -56,7 +56,7 @@ jobs:
         # Add a debugging step to list files
     - name: List files
       run: ls -la
-    # Check for Dockerfile
+    
     - name: Check Dockerfile exists
       run: |
         if [ ! -f Dockerfile ]; then
@@ -188,7 +188,10 @@ jobs:
         echo "pipeline_stage_duration_seconds{stage=\"${{ github.job }}\",pipeline=\"${{ github.workflow }}\"} $STAGE_DURATION" >> /tmp/pipeline_metrics
         echo "pipeline_status{stage=\"${{ github.job }}\",status=\"${{ job.status }}\"} $([ "${{ job.status }}" = "success" ] && echo 1 || echo 0)" >> /tmp/pipeline_metrics
 
-    
+    # Add a debugging step to print the metrics file
+    - name: Debug Pipeline Metrics
+      run: |
+        cat /tmp/pipeline_metrics
 
     # Add at the end of the workflow
     - name: Push Pipeline Metrics
