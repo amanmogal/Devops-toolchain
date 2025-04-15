@@ -28,6 +28,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Install kubectl using apt-get
+    - name: Install kubectl
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y kubectl
+
     # Authenticate to Google Cloud
     - id: 'auth'
       name: 'Authenticate to Google Cloud'
@@ -41,11 +47,6 @@ jobs:
     # Setup gcloud CLI
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
-
-    # Install kubectl
-    - name: Install kubectl
-      run: |
-        gcloud components install kubectl --quiet
 
     # Configure Docker for Artifact Registry
     - name: Configure Docker
