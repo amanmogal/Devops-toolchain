@@ -35,6 +35,11 @@ jobs:
         chmod +x ./kubectl
         sudo mv ./kubectl /usr/local/bin/kubectl
 
+    # Install gke-gcloud-auth-plugin
+    - name: Install gke-gcloud-auth-plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin --quiet
+
     # Authenticate to Google Cloud
     - id: 'auth'
       name: 'Authenticate to Google Cloud'
