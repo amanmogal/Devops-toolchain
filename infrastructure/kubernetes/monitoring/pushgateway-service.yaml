@@ -9,3 +9,4 @@ spec:
     targetPort: 9091
   selector:
     app: prometheus-pushgateway
+  type: LoadBalancer 
