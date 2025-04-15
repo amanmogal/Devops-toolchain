@@ -45,8 +45,7 @@ jobs:
     # Install kubectl
     - name: Install kubectl
       run: |
-        sudo apt-get update
-        sudo apt-get install -y kubectl
+        gcloud components install kubectl --quiet
 
     # Configure Docker for Artifact Registry
     - name: Configure Docker
