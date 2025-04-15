@@ -105,7 +105,9 @@ jobs:
     # Push Image Stage with error handling
     - name: Push docker Image
       run: |
-        if ! docker push $REGISTRY/app:$GITHUB_SHA; then
+        REGISTRY_LOWERCASE=$(echo "$REGISTRY" | tr '[:upper:]' '[:lower:]')
+
+        if ! docker push $REGISTRY_LOWERCASE/app:$GITHUB_SHA; then
           echo "Failed to push image"
           exit 1
         fi
