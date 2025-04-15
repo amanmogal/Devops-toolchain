@@ -28,6 +28,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Install kubectl
+    - name: Install kubectl
+      run: |
+        curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x ./kubectl
+        sudo mv ./kubectl /usr/local/bin/kubectl
+
     # Authenticate to Google Cloud
     - id: 'auth'
       name: 'Authenticate to Google Cloud'
@@ -41,11 +48,6 @@ jobs:
     # Setup gcloud CLI
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
-
-    # Install kubectl
-    - name: Install kubectl
-      run: |
-        gcloud components install kubectl --quiet
 
     # Configure Docker for Artifact Registry
     - name: Configure Docker
@@ -192,7 +194,7 @@ jobs:
       run: |
         cat /tmp/pipeline_metrics
 
-    # Add at the end of the workflow
+    # Push Pipeline Metrics
     - name: Push Pipeline Metrics
       if: ${{ env.SKIP_METRICS != 'true' }}
       run: |
@@ -214,6 +216,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Install kubectl
+    - name: Install kubectl
+      run: |
+        curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x ./kubectl
+        sudo mv ./kubectl /usr/local/bin/kubectl
+
     # Authenticate to Google Cloud
     - id: 'auth'
       name: 'Authenticate to Google Cloud'
@@ -221,12 +230,6 @@ jobs:
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
         token_format: 'access_token'
-
-    # Install kubectl
-    - name: Install kubectl
-      run: |
-        gcloud components install kubectl
-        gcloud components install gke-gcloud-auth-plugin
 
     # Get GKE Credentials with error handling
     - name: Get GKE Credentials
