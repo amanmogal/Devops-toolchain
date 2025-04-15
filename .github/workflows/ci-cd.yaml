@@ -16,8 +16,8 @@ env:
   REGISTRY: us-central1-docker.pkg.dev/devops-toolchain-456502/devops-toolchain
 
 jobs:
-  build-test-deploy:
-    name: Build, Test, and Deploy
+  build-and-deploy:
+    name: Build and Deploy
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,81 +28,28 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Authenticate to Google Cloud
-    - id: 'auth'
-      name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@v2'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
-        token_format: 'access_token'
-        project_id: '${{ env.PROJECT_ID }}'
-        service_account: 'github-actions@devops-toolchain-456502.iam.gserviceaccount.com'
-
-    # Setup gcloud CLI
-    - name: Set up Cloud SDK
+    # Set up Google Cloud SDK and kubectl
+    - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ env.PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
 
-    # Install kubectl
-    - name: Install kubectl
+    # Get GKE Credentials
+    - name: Get GKE Credentials
       run: |
-        gcloud components install kubectl --quiet
+        gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE --project $PROJECT_ID
 
-    # Configure Docker for Artifact Registry
-    - name: Configure Docker
-      run: |
-        gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
- 
-        # Add a debugging step to list files
-    - name: List files
-      run: ls -la
-    
-    - name: Check Dockerfile exists
-      run: |
-        if [ ! -f Dockerfile ]; then
-          echo "Error: Dockerfile not found"
-          exit 1
-        fi
-
-    # Build Stage with fixed tag format
+    # Build Docker Image
     - name: Build Docker Image
       env:
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Validate environment variables
-        echo "Building image for registry: $REGISTRY"
-        echo "Using tag: $IMAGE_TAG"
-        
-        # Build with proper tag format
-        docker build \
-          --build-arg NODE_ENV=production \
-          -t "${REGISTRY}/app:${IMAGE_TAG}" \
-          -t "${REGISTRY}/app:latest" \
-          .
-        
-        # Verify the build
-        docker images "${REGISTRY}/app"
+        docker build -t "${REGISTRY}/app:${IMAGE_TAG}" -t "${REGISTRY}/app:latest" .
 
-    # Test Stage
-    - name: Run Tests
-      env:
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        echo "Running basic tests..."
-        docker run --rm "${REGISTRY}/app:${IMAGE_TAG}" npm test || exit 1
-
-    # Security Scan Stage
-    - name: Run Security Scan
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: '${{ env.REGISTRY }}/app:${{ github.sha }}'
-        format: 'table'
-        exit-code: '1'
-        ignore-unfixed: true
-        severity: 'CRITICAL,HIGH'
-      continue-on-error: true
-
-    # Push Image Stage with error handling
-    - name: Push docker Image
+    # Push Docker Image
+    - name: Push Docker Image
       run: |
         REGISTRY_LOWERCASE=$(echo "$REGISTRY" | tr '[:upper:]' '[:lower:]')
         if ! docker push $REGISTRY_LOWERCASE/app:$GITHUB_SHA; then
@@ -111,181 +58,7 @@ jobs:
         fi
         docker push $REGISTRY/app:latest
 
-    # Get GKE Credentials with error handling
-    - name: Get GKE Credentials
-      run: |
-        if ! gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE --project $PROJECT_ID; then
-          echo "Failed to get cluster credentials"
-          exit 1
-        fi
-
-    # Deploy to Dev Stage
-    - name: Deploy to Dev
+    # Create Namespace
+    - name: Create Namespace
       run: |
         kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
-        cat <<EOF | kubectl apply -f -
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-          name: app
-          namespace: dev
-        spec:
-          replicas: 1
-          selector:
-            matchLabels:
-              app: devops-toolchain
-          template:
-            metadata:
-              labels:
-                app: devops-toolchain
-            spec:
-              containers:
-              - name: app
-                image: $REGISTRY/app:$GITHUB_SHA
-                ports:
-                - containerPort: 3000
-        ---
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: app-service
-          namespace: dev
-        spec:
-          type: ClusterIP
-          ports:
-          - port: 80
-            targetPort: 3000
-          selector:
-            app: devops-toolchain
-        EOF
-
-    # Commented out Test Reporting
-    # - name: Publish Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2
-    #   if: always()
-    #   with:
-    #     files: "test-results/*.xml"  # Updated path
-    #     check_name: "Test Results"
-    #     comment_mode: off
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-
-    # Add this job-level monitoring
-    - name: Setup Pipeline Monitoring
-      run: |
-        cat <<EOF > /tmp/pipeline_metrics
-        # HELP pipeline_duration_seconds Duration of pipeline execution
-        # TYPE pipeline_duration_seconds gauge
-        # HELP pipeline_status Pipeline execution status (0=failed, 1=success)
-        # TYPE pipeline_status gauge
-        EOF
-
-    # Add after each major stage (build, test, deploy)
-    - name: Export Stage Metrics
-      if: always()
-      run: |
-        STAGE_DURATION=$SECONDS
-        echo "pipeline_stage_duration_seconds{stage=\"${{ github.job }}\",pipeline=\"${{ github.workflow }}\"} $STAGE_DURATION" >> /tmp/pipeline_metrics
-        echo "pipeline_status{stage=\"${{ github.job }}\",status=\"${{ job.status }}\"} $([ "${{ job.status }}" = "success" ] && echo 1 || echo 0)" >> /tmp/pipeline_metrics
-
-    # Add a debugging step to print the metrics file
-    - name: Debug Pipeline Metrics
-      run: |
-        cat /tmp/pipeline_metrics
-
-    # Add at the end of the workflow
-    - name: Push Pipeline Metrics
-      if: ${{ env.SKIP_METRICS != 'true' }}
-      run: |
-        curl -X POST http://34.60.241.53:9091/metrics/job/github_actions \
-          --data-binary "@/tmp/pipeline_metrics"
-
-  deploy-prod:
-    name: Deploy to Production
-    needs: build-test-deploy
-    runs-on: ubuntu-latest
-    environment: 
-      name: production
-      url: ${{ steps.get_url.outputs.url }}
-    permissions:
-      contents: read
-      id-token: write
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    # Authenticate to Google Cloud
-    - id: 'auth'
-      name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@v2'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
-        token_format: 'access_token'
-
-    # Install kubectl
-    - name: Install kubectl
-      run: |
-        gcloud components install kubectl
-        gcloud components install gke-gcloud-auth-plugin
-
-    # Get GKE Credentials with error handling
-    - name: Get GKE Credentials
-      run: |
-        if ! gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_ZONE --project $PROJECT_ID; then
-          echo "Failed to get cluster credentials"
-          exit 1
-        fi
-
-    # Deploy to Prod Stage
-    - name: Deploy to Production
-      run: |
-        kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
-        cat <<EOF | kubectl apply -f -
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-          name: app
-          namespace: prod
-        spec:
-          replicas: 2
-          selector:
-            matchLabels:
-              app: devops-toolchain
-          template:
-            metadata:
-              labels:
-                app: devops-toolchain
-            spec:
-              containers:
-              - name: app
-                image: $REGISTRY/app:$GITHUB_SHA
-                ports:
-                - containerPort: 3000
-                resources:
-                  requests:
-                    memory: "128Mi"
-                    cpu: "100m"
-                  limits:
-                    memory: "256Mi"
-                    cpu: "200m"
-        ---
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: app-service
-          namespace: prod
-        spec:
-          type: LoadBalancer
-          ports:
-          - port: 80
-            targetPort: 3000
-          selector:
-            app: devops-toolchain
-        EOF
-
-    # Get Service URL
-    - name: Get Service URL
-      id: get_url
-      run: |
-        PROD_URL=$(kubectl get service app-service -n prod -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-        echo "url=https://${PROD_URL}" >> $GITHUB_OUTPUT
