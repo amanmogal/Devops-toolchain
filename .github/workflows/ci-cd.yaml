@@ -13,7 +13,7 @@ env:
   PROJECT_ID: devops-toolchain-456502
   GKE_CLUSTER: devops-toolchain-cluster
   GKE_ZONE: us-central1
-  REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
+  REGISTRY: us-central1-docker.pkg.dev/devops-toolchain-456502/devops-toolchain
 
 jobs:
   build-test-deploy:
@@ -35,7 +35,7 @@ jobs:
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
         token_format: 'access_token'
-        project_id: 'devops-toolchain-456502'  
+        project_id: '${{ env.PROJECT_ID }}'
         service_account: 'github-actions@devops-toolchain-456502.iam.gserviceaccount.com'
 
     # Setup gcloud CLI
@@ -64,7 +64,6 @@ jobs:
     # Build Stage with fixed tag format
     - name: Build Docker Image
       env:
-        REGISTRY: us-central1-docker.pkg.dev/devops-toolchain-456502/devops-toolchain
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # Validate environment variables
@@ -84,7 +83,6 @@ jobs:
     # Test Stage
     - name: Run Tests
       env:
-        REGISTRY: us-central1-docker.pkg.dev/devops-toolchain-456502/devops-toolchain
         IMAGE_TAG: ${{ github.sha }}
       run: |
         echo "Running basic tests..."
@@ -105,7 +103,6 @@ jobs:
     - name: Push docker Image
       run: |
         REGISTRY_LOWERCASE=$(echo "$REGISTRY" | tr '[:upper:]' '[:lower:]')
-
         if ! docker push $REGISTRY_LOWERCASE/app:$GITHUB_SHA; then
           echo "Failed to push image"
           exit 1
