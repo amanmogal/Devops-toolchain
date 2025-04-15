@@ -195,7 +195,7 @@ jobs:
 
     # Add at the end of the workflow
     - name: Push Pipeline Metrics
-      if: always()
+      if: ${{ env.SKIP_METRICS != 'true' }}
       run: |
         curl -X POST http://34.60.241.53:9091/metrics/job/github_actions \
           --data-binary "@/tmp/pipeline_metrics"
