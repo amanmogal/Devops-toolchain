@@ -1,5 +1,4 @@
 name: CI/CD Pipeline
-
 on:
   push:
     branches: 
@@ -57,7 +56,7 @@ jobs:
     # Check for dockerfile
     - name: Check dockerfile exists
       run: |
-        if [ ! -f dockerfile ]; then
+        if [ ! -f Dockerfile ]; then
           echo "Error: dockerfile not found"
           exit 1
         fi
