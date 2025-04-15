@@ -53,11 +53,11 @@ jobs:
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-    # Check for dockerfile
-    - name: Check dockerfile exists
+    # Check for Dockerfile
+    - name: Check Dockerfile exists
       run: |
         if [ ! -f docker/Dockerfile ]; then
-          echo "Error: dockerfile not found"
+          echo "Error: Dockerfile not found"
           exit 1
         fi
 
