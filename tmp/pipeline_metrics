@@ -1,0 +1,4 @@
+ HELP pipeline_duration_seconds Duration of pipeline execution
+# TYPE pipeline_duration_seconds gauge
+pipeline_duration_seconds{status="success"} 120
+EOF

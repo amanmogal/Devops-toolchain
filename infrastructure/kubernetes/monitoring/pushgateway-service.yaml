@@ -4,9 +4,9 @@ metadata:
   name: prometheus-pushgateway
   namespace: monitoring
 spec:
+  type: LoadBalancer
   ports:
   - port: 9091
     targetPort: 9091
   selector:
     app: prometheus-pushgateway
-  type: LoadBalancer 

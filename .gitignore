@@ -2,3 +2,4 @@
 scripts/
 sonar-project.properties
 grafana-secret.yaml
+node_modules/

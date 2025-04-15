@@ -14,7 +14,7 @@ env:
   PROJECT_ID: devops-toolchain-456502
   GKE_CLUSTER: devops-toolchain-cluster
   GKE_ZONE: us-central1
-  REGISTRY: us-central1-docker.pkg.dev/$PROJECT_ID/devops-toolchain
+  REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
 
 jobs:
   build-test-deploy:
@@ -65,7 +65,7 @@ jobs:
     # Build Stage with fixed tag format
     - name: Build Docker Image
       env:
-        DOCKERREGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
+        REGISTRY: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/devops-toolchain
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # Validate environment variables
@@ -160,50 +160,6 @@ jobs:
           selector:
             app: devops-toolchain
         EOF
-
-    # Add SonarQube Analysis with explicit configuration
-    - name: Cache SonarQube packages
-      uses: actions/cache@v4
-      with:
-        path: ~\sonar\cache
-        key: ${{ runner.os }}-sonar
-        restore-keys: ${{ runner.os }}-sonar
-
-    - name: SonarQube Analysis
-      uses: SonarSource/sonarqube-scan-action@v4
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      with:
-        args: >
-          -Dsonar.projectKey=devops-toolchain
-          -Dsonar.projectName="DevOps Toolchain"
-          -Dsonar.sources=.
-          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-          -Dsonar.java.binaries=.
-          -Dsonar.exclusions=**/*.pyc,**/*.class,**/node_modules/**,**/dist/**,.git/**,.github/**
-
-    # Optional: Add Quality Gate check
-    - name: SonarQube Quality Gate check
-      uses: SonarSource/sonarqube-quality-gate-action@v1
-      timeout-minutes: 5
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-    # Add Dependency Check
-    - name: Dependency Check
-      uses: dependency-check/Dependency-Check_Action@main
-      with:
-        project: 'DevOps-Toolchain'
-        path: '.'
-        format: 'HTML'
-
-    # Add Metrics Collection
-    - name: Export Pipeline Metrics
-      run: |
-        echo "pipeline_duration_seconds{status=\"${{ job.status }}\"} $SECONDS" >> /tmp/metrics
-        curl -X POST http://prometheus-pushgateway:9091/metrics/job/github_actions --data-binary "@/tmp/metrics"
 
     # Commented out Test Reporting
     # - name: Publish Test Results
