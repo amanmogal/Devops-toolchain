@@ -199,6 +199,13 @@ jobs:
         curl -X POST http://34.60.241.53:9091/metrics/job/github_actions \
           --data-binary "@/tmp/pipeline_metrics"
 
+    # SonarQube Scan
+    - name: SonarQube Scan
+      uses: SonarSource/sonarcloud-github-action@v1
+      with:
+        sonar-projectKey: ${{ secrets.SONAR_PROJECT_KEY }}
+        sonar-token: ${{ secrets.SONAR_TOKEN }}
+
   deploy-prod:
     name: Deploy to Production
     needs: build-test-deploy
