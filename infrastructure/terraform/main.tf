@@ -10,6 +10,12 @@ terraform {
       version = "~> 2.0"
     }
   }
+  
+  # Enable backend configuration for team collaboration
+  backend "gcs" {
+    bucket = "devops-toolchain-tf-state"
+    prefix = "terraform/state"
+  }
 }
 
 provider "google" {
@@ -17,11 +23,23 @@ provider "google" {
   region  = var.region
 }
 
+# Configure Kubernetes provider after cluster is created
+provider "kubernetes" {
+  host                   = "https://${google_container_cluster.primary.endpoint}"
+  token                  = data.google_client_config.current.access_token
+  cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth.0.cluster_ca_certificate)
+}
+
+data "google_client_config" "current" {}
+
 # GKE cluster
 resource "google_container_cluster" "primary" {
-  name     = "devops-toolchain-cluster"
+  name     = var.cluster_name
   project  = var.project_id
   location = var.region
+  
+  # Multi-zonal cluster if enabled
+  node_locations = var.multi_zone ? ["${var.region}-a", "${var.region}-b", "${var.region}-c"] : []
 
   network    = google_compute_network.vpc.id
   subnetwork = google_compute_subnetwork.subnet.id

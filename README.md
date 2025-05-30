@@ -1,7 +1,7 @@
 
 # DevOps Toolchain Project
 
-A comprehensive DevOps infrastructure implementation on Google Cloud Platform with automated CI/CD pipelines, robust monitoring, and infrastructure as code.
+A comprehensive DevOps infrastructure implementation on Google Cloud Platform with automated CI/CD pipelines, robust monitoring, and infrastructure as code. This toolchain is designed for real-world deployment across multiple teams and projects.
 
 ## Overview
 
@@ -51,17 +51,40 @@ graph TD
 - GitHub account
 - Terraform installed locally
 - Google Cloud SDK installed
+- PowerShell (for Windows)
 
-### Setup Instructions
+### Deployment Options
 
-1. Clone this repository
-2. Configure GCP credentials
-3. Initialize Terraform workspace
-4. Apply infrastructure configuration
-5. Configure GitHub Actions secrets
-6. Push application code to trigger CI/CD pipeline
+#### 1. Single-Team Deployment
 
-Detailed setup documentation is available in the [docs](/docs) directory.
+```powershell
+# Deploy for a single team
+.\toolchain.ps1 deploy -Environment dev
+```
+
+#### 2. Multi-Team Deployment
+
+```powershell
+# Deploy with multi-team support
+.\toolchain.ps1 deploy -Environment dev -MultiTeam
+
+# Register a project for a specific team
+.\toolchain.ps1 register -ProjectName "my-project" -RepositoryUrl "https://github.com/org/repo" -TeamName "team-a"
+```
+
+#### 3. Dedicated Instances per Team
+
+```powershell
+# Create a dedicated instance for a team
+.\toolchain.ps1 create-instance -ConfigFile "configs/projects/my-project/config.json"
+```
+
+Detailed setup documentation is available in the [docs](/docs) directory:
+
+- [Quick Start Guide](docs/QUICKSTART.md) - Get up and running in minutes
+- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) - Detailed deployment instructions
+- [User Guide](docs/USER_GUIDE.md) - For teams using the toolchain
+- [Architecture](docs/ARCHITECTURE.md) - Technical architecture diagrams
 
 ## Components
 
